@@ -3,7 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/common/Header';
 import { Navigation, NavTabId } from './components/common/Navigation';
 import { Toast } from './components/common/Toast';
-import { AuthModal } from './components/common/AuthModal';
+import { AuthModal, AuthModalTab } from './components/common/AuthModal';
 import { SchemaInspectorModal } from './components/common/SchemaInspectorModal';
 
 // Views
@@ -23,21 +23,30 @@ import { Database, ShieldCheck, Globe } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { currentRole } = useApp();
-  const [activeTab, setActiveTab] = useState<NavTabId>('home');
+  // Default to the MoES Institutional Admin Portal
+  const [activeTab, setActiveTab] = useState<NavTabId>('admin-dashboard');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('admin');
   const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
 
-  // If role changes and activeTab is invalid for that role, gracefully fallback to 'home'
+  // If role changes, adapt view
   React.useEffect(() => {
     const trainerOnlyTabs: NavTabId[] = ['content-studio', 'assessments', 'trainer-analytics'];
     const adminOnlyTabs: NavTabId[] = ['competency-engine', 'user-management', 'admin-dashboard'];
 
-    if (currentRole === 'trainee' && [...trainerOnlyTabs, ...adminOnlyTabs].includes(activeTab)) {
+    if (currentRole === 'admin' && activeTab === 'home') {
+      setActiveTab('admin-dashboard');
+    } else if (currentRole === 'trainee' && [...trainerOnlyTabs, ...adminOnlyTabs].includes(activeTab)) {
       setActiveTab('home');
     } else if (currentRole === 'trainer' && adminOnlyTabs.includes(activeTab)) {
       setActiveTab('home');
     }
   }, [currentRole, activeTab]);
+
+  const handleOpenAuthModal = (tab: AuthModalTab = 'admin') => {
+    setAuthModalTab(tab);
+    setIsAuthModalOpen(true);
+  };
 
   const handleSelectTab = (tab: NavTabId) => {
     if (tab === 'schema') {
@@ -51,7 +60,7 @@ const MainLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Institutional Top Header */}
       <Header
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenAuthModal={handleOpenAuthModal}
         onOpenSchemaDocs={() => setIsSchemaModalOpen(true)}
       />
 
@@ -158,10 +167,20 @@ const MainLayout: React.FC = () => {
       {/* Global Notifications Toast */}
       <Toast />
 
-      {/* Registration Modal for New Officers */}
+      {/* Dedicated Three-Role Authentication Window (Trainee, Trainer, Admin, Register) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        defaultTab={authModalTab}
+        onLoginSuccess={(user) => {
+          if (user.role === 'admin') {
+            setActiveTab('admin-dashboard');
+          } else if (user.role === 'trainer') {
+            setActiveTab('content-studio');
+          } else if (user.role === 'trainee') {
+            setActiveTab('my-learning');
+          }
+        }}
       />
 
       {/* Database Schema & Entity Architecture Modal */}

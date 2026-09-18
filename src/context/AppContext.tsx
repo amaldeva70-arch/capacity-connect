@@ -114,9 +114,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
-      return saved || 'usr-trainee-01';
+      // Default to Administrator role
+      if (!saved || saved === 'usr-trainee-01') {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, 'usr-admin-01');
+        return 'usr-admin-01';
+      }
+      return saved;
     } catch {
-      return 'usr-trainee-01';
+      return 'usr-admin-01';
     }
   });
 
@@ -255,10 +260,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    const fallbackUser = users[0];
-    if (fallbackUser) {
-      setCurrentUserId(fallbackUser.id);
-      showToast('Logged out of active session.');
+    const adminUser = users.find(u => u.role === 'admin') || users[0];
+    if (adminUser) {
+      setCurrentUserId(adminUser.id);
+      showToast('Logged out of officer session. Switched to MoES Admin Portal.');
     }
   };
 
